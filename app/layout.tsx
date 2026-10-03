@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Incident: duplicate statements from a lock that didn't hold",
+  title: "Portfolio",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
