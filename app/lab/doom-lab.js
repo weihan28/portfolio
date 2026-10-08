@@ -30,7 +30,7 @@ function start() {
   // Files under public/lab, with their sizes for the progress bar. The workers load their own scripts.
   // The .v1 in a name is its version: bump it when the file changes, since these are cached for a year (next.config.ts).
   const GAME_FILES = ["/lab/doom/doom.v1.wasm", "/lab/doom/doom1.wad"], GAME_BYTES = 385956 + 4196020;
-  const MODEL_FILES = ["/lab/needle/needle.v1.wasm", "/lab/needle/needle3-4L.v1.cact", "/lab/needle/heads-4L.v1.json"];
+  const MODEL_FILES = ["/lab/needle/needle.v1.wasm", "/lab/needle/needle3-4L.v2.cact", "/lab/needle/heads-4L.v1.json"];
   const MODEL_BYTES = 923348 + 15390548 + 465945;
   const DoomBot = window.DoomBot; // loaded from /lab/doom/doom-bot.js by mountDoomLab
 
