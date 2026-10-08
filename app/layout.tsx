@@ -7,9 +7,15 @@ const display = Instrument_Serif({ weight: "400", style: ["normal", "italic"], s
 const body = IBM_Plex_Sans({ weight: ["400", "500", "600"], subsets: ["latin"], variable: "--font-body" });
 const mono = IBM_Plex_Mono({ weight: ["400", "500"], subsets: ["latin"], variable: "--font-mono" });
 
+const DESCRIPTION = "Chin Wei Han, software engineer working on AI, from model architectures to production systems.";
+
+// metadataBase makes the og:image URL absolute, which WhatsApp and other link previews require.
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.weihan.tech"),
   title: "Wei Han",
-  description: "Chin Wei Han, software engineer working on AI, from model architectures to production systems.",
+  description: DESCRIPTION,
+  openGraph: { title: "Wei Han", description: DESCRIPTION, url: "/", siteName: "Wei Han", type: "website" },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
