@@ -11,7 +11,10 @@ export default function Mermaid({ chart }: { chart: string }) {
   useEffect(() => {
     let cancelled = false;
     import("mermaid").then(async ({ default: mermaid }) => {
-      mermaid.initialize({ startOnLoad: false, theme: "neutral" });
+      // Follow the page's light or dark palette.
+      const theme = document.documentElement.dataset.theme;
+      const dark = theme ? theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+      mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "neutral", securityLevel: "strict" });
       const { svg } = await mermaid.render(id, chart);
       if (!cancelled) setSvg(svg);
     });
