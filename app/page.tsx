@@ -53,8 +53,8 @@ const LEADERSHIP = [
 // Contact channels, laid out like the reference: an icon, the label over the address, and an arrow.
 const CHANNELS = [
   { label: "Email", value: "chinweihan28@gmail.com", href: "mailto:chinweihan28@gmail.com", Icon: Envelope },
-  { label: "GitHub", value: "github.com/weihan28", href: "https://github.com/weihan28", Icon: GithubLogo },
   { label: "LinkedIn", value: "linkedin.com/in/chinweihan", href: "https://www.linkedin.com/in/chinweihan/", Icon: LinkedinLogo },
+  { label: "GitHub", value: "github.com/weihan28", href: "https://github.com/weihan28", Icon: GithubLogo },
 ];
 
 export default function Home() {
@@ -198,29 +198,29 @@ export default function Home() {
         </section>
 
         <section id="contact">
-          <p className="eyebrow">Contact</p>
           <div className="contact">
-            <div>
+            <div className="contact-intro">
+              <p className="eyebrow">Contact</p>
               <h2>Have something worth building?</h2>
               <p className="muted">I&apos;m open to collaborations, research conversations and full-time opportunities in AI.</p>
-              <ul className="channels">
-                {CHANNELS.map(({ label, value, href, Icon }) => (
-                  <li key={label}>
-                    <a className="channel" href={href} {...(href.startsWith("http") ? { target: "_blank", rel: "noopener" } : {})}>
-                      <span className="channel-icon"><Icon size={19} aria-hidden /></span>
-                      <span className="channel-text"><span className="k">{label}</span><strong>{value}</strong></span>
-                      <ArrowUpRight className="channel-arrow" size={17} aria-hidden />
-                    </a>
-                  </li>
-                ))}
-              </ul>
-              <p className="mono muted" style={{ marginTop: 12 }}>Based in Kuala Lumpur · UTC+8</p>
+              <p className="contact-meta mono muted">Based in Kuala Lumpur · UTC+8</p>
             </div>
+            <ul className="channels">
+              {CHANNELS.map(({ label, value, href, Icon }) => (
+                <li key={label}>
+                  <a className="channel" href={href} {...(href.startsWith("http") ? { target: "_blank", rel: "noopener" } : {})}>
+                    <span className="channel-icon"><Icon size={19} aria-hidden /></span>
+                    <span className="channel-text"><span className="k">{label}</span><strong>{value}</strong></span>
+                    <ArrowUpRight className="channel-arrow" size={17} aria-hidden />
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
         <footer>
-          <p className="tag-line">Made in Kuala Lumpur, with curiosity and a great deal of coffee.</p>
+          <p className="tag-line">Built with curiosity and a great deal of coffee.</p>
         </footer>
       </main>
     </>
