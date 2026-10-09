@@ -36,7 +36,7 @@ function start() {
 
   const $ = id => document.getElementById(id);
   const canvas = $("lab-canvas"), ctx = canvas.getContext("2d");
-  const screenEl = $("doom-screen"), cover = $("play-cover"), fsBtn = $("doom-fs");
+  const screenEl = $("doom-screen"), cover = $("play-cover"), fsBtn = $("doom-fs"), wrapEl = $("doom-wrap");
   const stateEl = $("doom-state"), probsEl = $("doom-probs"), tapeEl = $("doom-tape");
 
   let priming = false;
@@ -328,7 +328,7 @@ function start() {
       return;
     }
     // The browser exits real fullscreen on its own; the fallback is ours to close.
-    if (e.key === "Escape" && screenEl.classList.contains("is-fullscreen")) {
+    if (e.key === "Escape" && wrapEl.classList.contains("is-fullscreen")) {
       if (type === "keydown") { e.preventDefault(); toggleFullscreen(); }
       return;
     }
@@ -350,8 +350,10 @@ function start() {
   screenEl.addEventListener("blur", () => { focused = false; userDown.clear(); syncAll(); syncRun(); }, { signal });
 
   /* Fullscreen, YouTube style: the button sits in the bottom-right corner, shows while the pointer moves over the
-     game or on a tap, and fades after a moment of stillness. It stays up while the game isn't running. Where the
-     Fullscreen API is missing (iPhone Safari allows it only on video), the screen is pinned over the page instead. */
+     game or on a tap, and fades after a moment of stillness. It stays up while the game isn't running. What goes
+     fullscreen is the game with the model's HUD: held upright, the HUD fills the space under the game; turned sideways,
+     the game has the screen to itself (globals.css). Where the Fullscreen API is missing (iPhone Safari allows it
+     only on video), the two are pinned over the page instead, and the page beneath is kept from scrolling. */
   const CONTROLS_MS = 2500;
   let controlsTimer = null;
   function showControls() {
@@ -363,7 +365,7 @@ function start() {
     clearTimeout(controlsTimer);
     if (running) screenEl.classList.remove("controls-on");
   }
-  const isFullscreen = () => document.fullscreenElement === screenEl || screenEl.classList.contains("is-fullscreen");
+  const isFullscreen = () => document.fullscreenElement === wrapEl || wrapEl.classList.contains("is-fullscreen");
   function syncFullscreen() {
     const on = isFullscreen();
     screenEl.classList.toggle("fs", on);
@@ -373,14 +375,15 @@ function start() {
     showControls();
   }
   function setFallback(on) {
-    screenEl.classList.toggle("is-fullscreen", on);
+    wrapEl.classList.toggle("is-fullscreen", on);
+    document.documentElement.classList.toggle("doom-locked", on);
     syncFullscreen();
   }
   function toggleFullscreen() {
-    if (document.fullscreenElement === screenEl) document.exitFullscreen();
-    else if (screenEl.classList.contains("is-fullscreen")) setFallback(false);
-    else if (screenEl.requestFullscreen && document.fullscreenEnabled) {
-      screenEl.requestFullscreen().catch(() => setFallback(true));
+    if (document.fullscreenElement === wrapEl) document.exitFullscreen();
+    else if (wrapEl.classList.contains("is-fullscreen")) setFallback(false);
+    else if (wrapEl.requestFullscreen && document.fullscreenEnabled) {
+      wrapEl.requestFullscreen().catch(() => setFallback(true));
     } else setFallback(true);
     screenEl.focus();
   }
@@ -396,14 +399,16 @@ function start() {
   showControls();
 
   /* Touch controls, for touchscreens only: they're hidden elsewhere, and a mouse never drives them. The stick is
-     fixed in the bottom-left, like Call of Duty Mobile's; pushing it holds W, A, S and D, eight ways. A drag anywhere
-     else turns the crosshair: each PX_PER_TIC of sideways travel holds the turn key for one tic. USE is Space. All of
-     it goes through userDown like the keyboard, so the model still overrides turning while it aims. */
+     fixed in the bottom-left, like Call of Duty Mobile's; pushing it holds W, A, S and D, eight ways. USE is Space.
+     Both go through userDown like the keyboard. A drag anywhere else turns the crosshair as DOOM's mouse does, by
+     exactly DEG_PER_PX per pixel, so the view follows the finger with no lag; while the model aims, the drag is
+     ignored, just as it overrides the arrow keys then. */
   const touchUI = matchMedia("(hover: none) and (pointer: coarse)");
   const stickEl = $("doom-stick"), knob = $("doom-knob"), useEl = $("doom-use");
-  const STICK_DEAD = .35, KNOB_REACH = .6, PX_PER_TIC = 8, SLOW_TICS = 6, TAP_MS = 250, TAP_PX = 10;
+  const STICK_DEAD = .35, KNOB_REACH = .6, TAP_MS = 250, TAP_PX = 10;
+  const DEG_PER_PX = .6, MOUSE_PER_DEG = 65536 / 8 / 360; // DOOM turns 8/65536 of a circle per unit of mouse
   const STICK_KEYS = [K.up, K.down, K.strafeLeft, K.strafeRight];
-  let stickId = null, lookId = null, lookX = 0, lookStart = null, turnPx = 0, turnTics = 0, turnTimer = null;
+  let stickId = null, lookId = null, lookX = 0, lookStart = null, turnRest = 0;
   if (touchUI.matches) cover.textContent = "Tap to play";
 
   function press(k, down) {
@@ -428,22 +433,18 @@ function start() {
     for (const k of STICK_KEYS) press(k, false);
   }
 
-  /* DOOM turns slowly for the first 6 tics a turn key is held, then twice as fast. Letting go for one tic every 6
-     keeps every tic at the slow rate, so a drag turns the same amount however fast it is. */
-  function turnTick() {
-    const dir = turnPx <= -PX_PER_TIC ? -1 : turnPx >= PX_PER_TIC ? 1 : 0;
-    const hold = dir !== 0 && turnTics < SLOW_TICS;
-    press(K.left, hold && dir < 0); press(K.right, hold && dir > 0);
-    if (hold) { turnPx -= dir * PX_PER_TIC; turnTics++; }
-    else turnTics = 0;
-    if (!dir && lookId === null) { clearInterval(turnTimer); turnTimer = null; turnPx = 0; }
+  // The worker takes whole mouse units, so the fraction left over is carried into the next move.
+  function turnBy(px) {
+    if (!worker || aimActive) { turnRest = 0; return; }
+    const units = px * DEG_PER_PX * MOUSE_PER_DEG + turnRest, dx = Math.trunc(units);
+    turnRest = units - dx;
+    if (dx) worker.postMessage({ type: "mouse", dx });
   }
 
   function resetTouch() {
     if (stickId !== null) releaseStick();
-    lookId = null; turnPx = 0; turnTics = 0;
-    clearInterval(turnTimer); turnTimer = null;
-    press(K.left, false); press(K.right, false); press(K.use, false);
+    lookId = null; turnRest = 0;
+    press(K.use, false);
     useEl.classList.remove("active");
   }
 
@@ -477,11 +478,10 @@ function start() {
     lookId = e.pointerId; lookX = e.clientX;
     lookStart = { x: e.clientX, y: e.clientY, t: performance.now() };
     screenEl.setPointerCapture(e.pointerId);
-    if (!turnTimer) turnTimer = setInterval(turnTick, TIC_MS);
   }, { signal });
   screenEl.addEventListener("pointermove", e => {
     if (e.pointerId !== lookId) return;
-    turnPx += e.clientX - lookX;
+    turnBy(e.clientX - lookX);
     lookX = e.clientX;
   }, { signal });
   for (const type of ["pointerup", "pointercancel"]) screenEl.addEventListener(type, e => {
@@ -499,10 +499,10 @@ function start() {
     disposed = true;
     if (window.cancelIdleCallback) cancelIdleCallback(idle); else clearTimeout(idle);
     listening.abort();
+    if (wrapEl.classList.contains("is-fullscreen")) setFallback(false);
     clearTimeout(controlsTimer);
     observer.disconnect();
     clearInterval(decideTimer);
-    clearInterval(turnTimer);
     for (const t of Object.values(tapTimers)) clearTimeout(t);
     if (worker) worker.terminate();
     if (model) model.terminate();

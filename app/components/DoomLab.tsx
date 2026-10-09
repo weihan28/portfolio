@@ -14,11 +14,14 @@ export default function DoomLab() {
           <span className="desktop-only"><kbd>←</kbd><kbd>→</kbd> turn the crosshair</span>
           <span className="desktop-only"><kbd>Space</kbd> open doors, respawn, next level</span>
           <span className="desktop-only"><kbd>P</kbd> pause</span>
-          <span className="touch-only"><kbd>Stick</kbd> move</span>
-          <span className="touch-only"><kbd>Drag</kbd> turn the crosshair</span>
-          <span className="touch-only"><kbd>Use</kbd> open doors, respawn, next level</span>
+          <span className="desktop-only"><kbd>F</kbd> full screen</span>
+          <span className="touch-only"><kbd>Left stick</kbd> move</span>
+          <span className="touch-only"><kbd>Drag on the game</kbd> turn the crosshair</span>
+          <span className="touch-only"><kbd>USE</kbd> open doors, respawn, next level</span>
+          <span className="touch-only"><kbd>Tap the game</kbd> show the full screen button</span>
+          <span className="touch-only"><kbd>Tap outside</kbd> pause</span>
         </div>
-        <div className="doom">
+        <div className="doom" id="doom-wrap">
           <div className="doom-screen" id="doom-screen" tabIndex={0} role="application"
             aria-label="DOOM. Move with W, A, S and D, and turn with the left and right arrow keys.">
             <canvas id="lab-canvas" width={640} height={400} />

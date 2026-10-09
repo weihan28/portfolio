@@ -309,11 +309,23 @@ kbd { font-family: var(--mono); font-size: 11.5px; min-width: 24px; text-align: 
 .fs-exit, .doom-screen.fs .fs-enter { display: none; }
 .doom-screen.fs .fs-exit { display: inline; }
 
-/* Fullscreen: the game alone on black, letterboxed at 16:10. The fallback pins it over the page where the API is missing. */
-.doom-screen:fullscreen, .doom-screen.is-fullscreen { display: grid; place-items: center; max-width: none; background: #000; border-radius: 0; }
-.doom-screen.is-fullscreen { position: fixed; inset: 0; z-index: 1000; }
-.doom-screen:fullscreen canvas, .doom-screen.is-fullscreen canvas { width: min(100vw, 160vh); max-height: 100vh; border-radius: 0; }
-.doom-screen:fullscreen .play-cover, .doom-screen.is-fullscreen .play-cover { border-radius: 0; }
+/* Fullscreen takes the game and the model's HUD together. Sideways, the game has the screen to itself, letterboxed at
+   16:10; upright, the game spans the top and the HUD fills everything beneath it, so nothing scrolls. The fallback
+   pins the same thing over the page where the Fullscreen API is missing, and locks the page underneath. */
+:is(.doom:fullscreen, .doom.is-fullscreen) { display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; gap: 0; width: 100%; height: 100%; background: #000; touch-action: none; }
+.doom.is-fullscreen { position: fixed; inset: 0; z-index: 1000; height: 100vh; height: 100dvh; overscroll-behavior: contain; }
+html.doom-locked, html.doom-locked body { overflow: hidden; overscroll-behavior: none; }
+:is(.doom:fullscreen, .doom.is-fullscreen) .doom-screen { display: grid; place-items: center; width: 100%; height: 100%; max-width: none; border-radius: 0; outline: none; }
+:is(.doom:fullscreen, .doom.is-fullscreen) canvas { width: min(100%, 160vh); width: min(100%, 160dvh); border-radius: 0; }
+:is(.doom:fullscreen, .doom.is-fullscreen) .play-cover { border-radius: 0; }
+:is(.doom:fullscreen, .doom.is-fullscreen) .hud { display: none; }
+@media (orientation: portrait) {
+  :is(.doom:fullscreen, .doom.is-fullscreen) { display: flex; flex-direction: column; background: var(--bg); }
+  :is(.doom:fullscreen, .doom.is-fullscreen) .doom-screen { display: block; flex: none; height: auto; }
+  :is(.doom:fullscreen, .doom.is-fullscreen) canvas { width: 100%; }
+  :is(.doom:fullscreen, .doom.is-fullscreen) .hud { display: flex; flex: 1 1 0; width: 100%; height: auto; min-height: 0; border: 0; border-radius: 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
+  :is(.doom:fullscreen, .doom.is-fullscreen) .aim-col { grid-template-rows: auto minmax(20px, 1fr) auto auto; }
+}
 .doom-screen.fs .fs-btn { right: 16px; bottom: 16px; }
 .doom-screen.fs:not(.controls-on) { cursor: none; }
 
