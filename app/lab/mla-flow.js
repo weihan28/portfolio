@@ -268,7 +268,7 @@ export function mountMla(host) {
   // Every attribute render() moves: the travelling bars' groups and rects, the matrices' glow, and the vectors filling.
   const TRACKS = [
     ...movers.flat().map(g => [g, "opacity", 3]),
-    ...movers.flat().flatMap(g => [...g.children].flatMap(r => [[r, "x", 1], [r, "y", 1], [r, "width", 1]])),
+    ...movers.flat().flatMap(g => [...g.children].flatMap(r => [[r, "x", 1, g], [r, "y", 1, g], [r, "width", 1, g]])),
     ...weightEls.map(p => [p, "fill-opacity", 3]), [attnEl, "fill-opacity", 3],
     ...slotEls.flat().map(r => [r, "fill-opacity", 3]),
   ];
@@ -278,6 +278,20 @@ export function mountMla(host) {
       render(Math.min(i / BAKE_FPS, CYCLE - 1e-3));
       TRACKS.forEach(([node, attr, digits], k) => values[k].push(+(+(node.getAttribute(attr) ?? 0)).toFixed(digits)));
     }
+    /* A bar only gets a place once its trip starts, so before that it reads as 0,0, and <animate> would slide it in
+       from the top-left corner as it fades in. While its group is hidden, hold it where it next appears (or, after its
+       last trip, where it was last seen), so it only ever moves while it's visible. */
+    const opacityOf = new Map(TRACKS.filter(([, attr]) => attr === "opacity").map(([g], k) => [g, values[k]]));
+    TRACKS.forEach(([, , , group], k) => {
+      if (!group) return;
+      const shown = opacityOf.get(group), v = values[k];
+      let lastShown = frames;
+      while (lastShown >= 0 && !(shown[lastShown] > 0)) lastShown--;
+      if (lastShown < 0) return;
+      let held = v[lastShown];
+      for (let i = lastShown + 1; i <= frames; i++) v[i] = held;
+      for (let i = lastShown; i >= 0; i--) shown[i] > 0 ? (held = v[i]) : (v[i] = held);
+    });
     const anims = TRACKS.flatMap(([node, attr], k) => {
       const v = values[k];
       if (v.every(x => x === v[0])) { node.setAttribute(attr, v[0]); return []; }
