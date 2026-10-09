@@ -3,7 +3,8 @@
    Originally an experiment (app/experiments/mla-2d), now drawn in the page's own colours.
    Trapezoids are weight matrices (wide side = larger dimension), bars are vectors. Each cycle, copies of the bars
    travel through the matrices. Accent bars are what gets cached during generation (c^KV and k^R); the warm part is
-   RoPE. It only animates while the hero is on screen, and shows a single still frame for reduced motion. */
+   RoPE. It only animates while the hero is on screen. On wide screens it shows a single still frame for reduced
+   motion; on phones it plays as a self-running animated SVG (see the end of this file). */
 export function mountMla(host) {
   const NS = "http://www.w3.org/2000/svg";
   const VIOLET = "var(--accent)", INK = "var(--ink)", CACHE = "var(--accent)", ROPE = "var(--fire)", PLAIN = "var(--line)";
@@ -246,14 +247,16 @@ export function mountMla(host) {
     });
   };
 
+  /* Wide screens: requestAnimationFrame drives render() while the diagram is on screen, or a single still frame for
+     reduced motion. Phones (the layout's 860px breakpoint): one whole cycle is baked into SMIL <animate> elements,
+     sampled BAKE_FPS times a second from the same render(), so the SVG plays by itself like an animated SVG file,
+     with no script per frame. It plays whatever the motion setting, and its labels show from the start (globals.css). */
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let elapsed = still ? FROZEN_AT : 0, last = performance.now(), visible = true;
-  render(elapsed % CYCLE);
-  if (still) return () => { listening.abort(); host.replaceChildren(); };
-  const observer = new IntersectionObserver(es => { visible = es[0].isIntersecting; });
-  observer.observe(host);
-  let raf = 0;
+  const phone = matchMedia("(max-width: 860px)");
+  const BAKE_FPS = 12;
+  let elapsed = still ? FROZEN_AT : 0, last = performance.now(), visible = true, raf = 0, baked = null;
   const tick = now => {
+    if (baked) { raf = 0; return; }
     raf = requestAnimationFrame(tick);
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
@@ -261,6 +264,56 @@ export function mountMla(host) {
     elapsed += dt;
     render(elapsed % CYCLE);
   };
-  raf = requestAnimationFrame(tick);
+
+  // Every attribute render() moves: the travelling bars' groups and rects, the matrices' glow, and the vectors filling.
+  const TRACKS = [
+    ...movers.flat().map(g => [g, "opacity", 3]),
+    ...movers.flat().flatMap(g => [...g.children].flatMap(r => [[r, "x", 1], [r, "y", 1], [r, "width", 1]])),
+    ...weightEls.map(p => [p, "fill-opacity", 3]), [attnEl, "fill-opacity", 3],
+    ...slotEls.flat().map(r => [r, "fill-opacity", 3]),
+  ];
+  function bake() {
+    const frames = Math.round(CYCLE * BAKE_FPS), values = TRACKS.map(() => []);
+    for (let i = 0; i <= frames; i++) {
+      render(Math.min(i / BAKE_FPS, CYCLE - 1e-3));
+      TRACKS.forEach(([node, attr, digits], k) => values[k].push(+(+(node.getAttribute(attr) ?? 0)).toFixed(digits)));
+    }
+    const anims = TRACKS.flatMap(([node, attr], k) => {
+      const v = values[k];
+      if (v.every(x => x === v[0])) { node.setAttribute(attr, v[0]); return []; }
+      const a = document.createElementNS(NS, "animate");
+      a.setAttribute("attributeName", attr);
+      a.setAttribute("dur", `${CYCLE}s`);
+      a.setAttribute("repeatCount", "indefinite");
+      a.setAttribute("values", v.join(";"));
+      node.appendChild(a);
+      return [a];
+    });
+    svg.setCurrentTime(0);
+    return anims;
+  }
+
+  function setMode() {
+    if (phone.matches) {
+      if (baked) return;
+      cancelAnimationFrame(raf); raf = 0;
+      baked = bake();
+      if (!visible) svg.pauseAnimations();
+    } else {
+      if (baked) { baked.forEach(a => a.remove()); baked = null; svg.unpauseAnimations(); }
+      render(elapsed % CYCLE);
+      if (!still && !raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
+    }
+  }
+
+  // Watch the stage, which always has the diagram's size: the host can lay out empty (it did in iPhone Safari), and an
+  // empty box may never count as on screen, which would leave the animation paused for good.
+  const observer = new IntersectionObserver(es => {
+    visible = es[es.length - 1].isIntersecting;
+    if (baked) visible ? svg.unpauseAnimations() : svg.pauseAnimations();
+  });
+  observer.observe(stage);
+  phone.addEventListener("change", setMode, { signal });
+  setMode();
   return () => { cancelAnimationFrame(raf); observer.disconnect(); listening.abort(); host.replaceChildren(); };
 }

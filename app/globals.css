@@ -131,7 +131,9 @@ p { margin: 0; max-width: 65ch; }
      from its own aspect ratio under size containment, as on wide screens, the section came out 0×0 in iPhone Safari.
      The SVG's viewBox gives the height too, so it holds even where the stage's aspect ratio doesn't. */
   .mla { grid-area: mla; z-index: 0; align-self: start; container-type: normal; }
-  .flow-stage { position: relative; inset: auto; width: 100%; height: auto; max-width: none; }
+  .flow-stage { position: relative; inset: auto; width: 100%; height: auto; max-width: none; opacity: 1; -webkit-mask-image: none; mask-image: none; }
+  /* On phones the diagram is shown in full, labels and all, from the start. */
+  .flow-labels { opacity: 1; }
   .flow-stage svg { height: auto; }
   .flow-hint { opacity: 1; }
 }
