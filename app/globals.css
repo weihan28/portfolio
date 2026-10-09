@@ -125,7 +125,9 @@ p { margin: 0; max-width: 65ch; }
 .flow-label sub, .flow-label sup { font-size: .72em; }
 @media (max-width: 860px) {
   .intro { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "mla" "about"; row-gap: 32px; }
-  .mla { grid-area: mla; z-index: 0; aspect-ratio: 1080 / 954; }
+  /* A definite width, with the height from the diagram's proportions. Safari sizes an aspect-ratio box under size
+     containment as if it were empty, so here, where only the width is queried, the containment is inline-size. */
+  .mla { grid-area: mla; z-index: 0; width: 100%; align-self: start; aspect-ratio: 1080 / 954; container-type: inline-size; }
   .flow-stage { left: 0; width: 100%; height: auto; opacity: 1; -webkit-mask-image: none; mask-image: none; }
   .flow-hint { opacity: 1; }
 }
@@ -311,12 +313,11 @@ kbd { font-family: var(--mono); font-size: 11.5px; min-width: 24px; text-align: 
 
 /* Fullscreen takes the game and the model's HUD together. Sideways, the game has the screen to itself, letterboxed at
    16:10; upright, the game spans the top and the HUD fills everything beneath it, so nothing scrolls. The fallback
-   pins the same thing over the page where the Fullscreen API is missing, and locks the page underneath. */
+   pins the same thing over the page where the Fullscreen API is missing. It covers the screen and ignores scroll
+   gestures (touch-action), which is what keeps the page beneath still. The page itself is never locked: iPhone Safari
+   brings its toolbars back on a page that can't scroll, and they'd then stay out when the phone is turned. */
 :is(.doom:fullscreen, .doom.is-fullscreen) { display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; gap: 0; width: 100%; height: 100%; background: #000; touch-action: none; }
 .doom.is-fullscreen { position: fixed; inset: 0; z-index: 1000; height: 100vh; height: 100dvh; overscroll-behavior: contain; }
-/* Upright, the page beneath is locked. Sideways it isn't: iPhone Safari only keeps its toolbars hidden on a page that
-   can scroll, and the pinned game already covers the screen and ignores scroll gestures (touch-action above). */
-@media (orientation: portrait) { html.doom-locked, html.doom-locked body { overflow: hidden; overscroll-behavior: none; } }
 :is(.doom:fullscreen, .doom.is-fullscreen) .doom-screen { display: grid; place-items: center; width: 100%; height: 100%; max-width: none; border-radius: 0; outline: none; }
 :is(.doom:fullscreen, .doom.is-fullscreen) canvas { width: min(100%, 160vh); width: min(100%, 160dvh); border-radius: 0; }
 :is(.doom:fullscreen, .doom.is-fullscreen) .play-cover { border-radius: 0; }

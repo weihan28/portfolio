@@ -389,7 +389,6 @@ function start() {
   }, { signal });
   function setFallback(on) {
     wrapEl.classList.toggle("is-fullscreen", on);
-    document.documentElement.classList.toggle("doom-locked", on);
     syncFullscreen();
   }
   function toggleFullscreen() {
