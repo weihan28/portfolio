@@ -314,7 +314,9 @@ kbd { font-family: var(--mono); font-size: 11.5px; min-width: 24px; text-align: 
    pins the same thing over the page where the Fullscreen API is missing, and locks the page underneath. */
 :is(.doom:fullscreen, .doom.is-fullscreen) { display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; gap: 0; width: 100%; height: 100%; background: #000; touch-action: none; }
 .doom.is-fullscreen { position: fixed; inset: 0; z-index: 1000; height: 100vh; height: 100dvh; overscroll-behavior: contain; }
-html.doom-locked, html.doom-locked body { overflow: hidden; overscroll-behavior: none; }
+/* Upright, the page beneath is locked. Sideways it isn't: iPhone Safari only keeps its toolbars hidden on a page that
+   can scroll, and the pinned game already covers the screen and ignores scroll gestures (touch-action above). */
+@media (orientation: portrait) { html.doom-locked, html.doom-locked body { overflow: hidden; overscroll-behavior: none; } }
 :is(.doom:fullscreen, .doom.is-fullscreen) .doom-screen { display: grid; place-items: center; width: 100%; height: 100%; max-width: none; border-radius: 0; outline: none; }
 :is(.doom:fullscreen, .doom.is-fullscreen) canvas { width: min(100%, 160vh); width: min(100%, 160dvh); border-radius: 0; }
 :is(.doom:fullscreen, .doom.is-fullscreen) .play-cover { border-radius: 0; }
