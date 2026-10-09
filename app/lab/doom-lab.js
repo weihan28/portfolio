@@ -384,8 +384,8 @@ function start() {
      let go past a fifth of the width, or with a flick, and it turns. It wraps around, so either way from either page
      turns to the other. The dots follow, and a tap on one turns to its page. Touching the pages mustn't take focus
      from the game, since that would pause it. */
-  const pageEls = [...pagesEl.children], PAGE_MS = 480, PAGE_FLICK = 0.4, PAGE_FLICK_MS = 100;
-  const PAGE_EASE = "cubic-bezier(.16, 1, .3, 1)"; // fast off the mark, then a long glide to a stop
+  const pageEls = [...pagesEl.children], PAGE_MS = 800, PAGE_FLICK = 0.4, PAGE_FLICK_MS = 100;
+  const PAGE_EASE = "cubic-bezier(.65, 0, .35, 1)"; // a slow ease-in-out: gentle away, gentle to a stop
   let page = 0, pageDrag = null, turning = false;
   function showDot(i) { dots.forEach((d, j) => d.classList.toggle("on", j === i)); }
   /* Lays the pages out with the current one moved by `shift` widths plus `dx` pixels. The page on the `side` it's
@@ -403,7 +403,7 @@ function start() {
   function turnPage(dir, dx = 0) {
     if (turning) return;
     turning = true;
-    const ms = Math.max(280, PAGE_MS * (1 - Math.abs(dx) / (pagesEl.clientWidth || 1)));
+    const ms = Math.max(480, PAGE_MS * (1 - Math.abs(dx) / (pagesEl.clientWidth || 1)));
     placePages(0, dx, dir);
     void pagesEl.offsetWidth; // lay the incoming page out beside the current one before both move
     placePages(-dir, 0, dir, ms);
@@ -441,7 +441,7 @@ function start() {
     const dx = e.clientX - d.x, [t0, x0] = d.trail[0];
     const speed = Math.abs(e.clientX - x0) / Math.max(1, performance.now() - t0);
     if (type === "pointerup" && (Math.abs(dx) > pagesEl.clientWidth / 5 || speed > PAGE_FLICK)) turnPage(dx < 0 ? 1 : -1, dx);
-    else placePages(0, 0, dx < 0 ? 1 : -1, PAGE_MS);
+    else placePages(0, 0, dx < 0 ? 1 : -1, 520);
   }, { signal });
   for (const type of ["pointerdown", "mousedown"]) wrapEl.addEventListener(type, e => {
     if (isFullscreen() && !screenEl.contains(e.target)) e.preventDefault();

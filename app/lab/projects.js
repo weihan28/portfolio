@@ -102,9 +102,11 @@ export function mountProjects() {
      (or the previous) slides in from the other side, wrapping around at either end. The timer moves on the same way.
      Vertical drags stay with the page (touch-action: pan-y in globals.css). */
   const phone = matchMedia("(max-width: 760px)");
-  const SLIDE_MS = 480, FLICK = 0.4, FLICK_MS = 100; // a flick: over FLICK px per ms across the last FLICK_MS
-  // The card leaves picking up speed and arrives gliding to a stop, so the two halves read as one motion.
-  const LEAVE_MS = 260, LEAVE = "cubic-bezier(.4, 0, 1, 1)", ARRIVE = "cubic-bezier(.16, 1, .3, 1)";
+  const FLICK = 0.4, FLICK_MS = 100; // a flick: over FLICK px per ms across the last FLICK_MS
+  /* One slow ease-in-out split across the swap: the card leaves easing in (a cubic ease-in) and the next arrives
+     easing out (the matching cubic ease-out). They meet at the same speed, so it reads as a single gentle motion. */
+  const LEAVE_MS = 400, SLIDE_MS = 400, LEAVE = "cubic-bezier(.32, 0, .67, 0)", ARRIVE = "cubic-bezier(.33, 1, .68, 1)";
+  const BACK_MS = 520, BACK = "cubic-bezier(.65, 0, .35, 1)"; // a short drag eases back into place
   const listening = new AbortController(), { signal } = listening;
   let drag = null, dragged = false, sliding = false;
   function setX(x, ms, ease = ARRIVE) {
@@ -117,7 +119,7 @@ export function mountProjects() {
     if (sliding) return;
     sliding = true;
     const w = cardEl.offsetWidth, ms = reducedMotion ? 0 : SLIDE_MS;
-    const out = reducedMotion ? 0 : Math.max(140, LEAVE_MS * (1 - Math.abs(fromX) / w));
+    const out = reducedMotion ? 0 : Math.max(220, LEAVE_MS * (1 - Math.abs(fromX) / w));
     setX(-dir * w, out, LEAVE);
     setTimeout(() => {
       showProject((current + dir + projects.length) % projects.length);
@@ -154,7 +156,7 @@ export function mountProjects() {
     const dx = e.clientX - d.x, [t0, x0] = d.trail[0];
     const speed = Math.abs(e.clientX - x0) / Math.max(1, performance.now() - t0);
     if (type === "pointerup" && (Math.abs(dx) > cardEl.offsetWidth / 5 || speed > FLICK)) slideTo(dx < 0 ? 1 : -1, dx);
-    else setX(0, reducedMotion ? 0 : SLIDE_MS);
+    else setX(0, reducedMotion ? 0 : BACK_MS, BACK);
   }, { signal });
   // A swipe that ends on one of the card's links shouldn't also follow it.
   cardEl.addEventListener("click", e => { if (dragged) { e.preventDefault(); e.stopPropagation(); dragged = false; } }, { capture: true, signal });
