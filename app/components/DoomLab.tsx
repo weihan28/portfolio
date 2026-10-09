@@ -13,13 +13,19 @@ export default function DoomLab() {
           <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</span>
           <span><kbd>←</kbd><kbd>→</kbd> turn the crosshair</span>
           <span><kbd>Space</kbd> open doors, respawn, next level</span>
-          <span><kbd>Esc</kbd> pause</span>
+          <span><kbd>P</kbd> pause</span>
         </div>
         <div className="doom">
           <div className="doom-screen" id="doom-screen" tabIndex={0} role="application"
             aria-label="DOOM. Move with W, A, S and D, and turn with the left and right arrow keys.">
             <canvas id="lab-canvas" width={640} height={400} />
             <div className="play-cover" id="play-cover" hidden>Click to play</div>
+            <button type="button" className="fs-btn" id="doom-fs" aria-label="Full screen (f)" title="Full screen (f)">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path className="fs-enter" d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" />
+                <path className="fs-exit" d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5" />
+              </svg>
+            </button>
           </div>
           <aside className="hud" aria-label="Model output">
             <section className="hud-block">

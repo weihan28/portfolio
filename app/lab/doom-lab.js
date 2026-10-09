@@ -36,7 +36,7 @@ function start() {
 
   const $ = id => document.getElementById(id);
   const canvas = $("lab-canvas"), ctx = canvas.getContext("2d");
-  const screenEl = $("doom-screen"), cover = $("play-cover");
+  const screenEl = $("doom-screen"), cover = $("play-cover"), fsBtn = $("doom-fs");
   const stateEl = $("doom-state"), probsEl = $("doom-probs"), tapeEl = $("doom-tape");
 
   let priming = false;
@@ -216,6 +216,7 @@ function start() {
     const want = ready && !paused && focused && inView && !document.hidden;
     if (want === running) return;
     running = want;
+    showControls();
     worker.postMessage({ type: "run", on: want });
     if (want) {
       if (!t0) t0 = performance.now();
@@ -225,7 +226,9 @@ function start() {
       clearInterval(decideTimer); setHeld([]); setAimActive(false);
     }
   }
-  document.addEventListener("visibilitychange", syncRun);
+  // Every listener goes with this start(): Fast Refresh remounts onto the same elements, so old ones must not linger.
+  const listening = new AbortController(), { signal } = listening;
+  document.addEventListener("visibilitychange", syncRun, { signal });
   const observer = new IntersectionObserver(es => { inView = es[0].isIntersecting; syncRun(); });
   observer.observe(screenEl);
 
@@ -312,8 +315,19 @@ function start() {
   const MANUAL = { w: K.up, s: K.down, a: K.strafeLeft, d: K.strafeRight, arrowup: K.up, arrowdown: K.down,
     arrowleft: K.left, arrowright: K.right, " ": K.use };
   for (const type of ["keydown", "keyup"]) screenEl.addEventListener(type, e => {
-    if (e.key === "Escape") {
-      if (ready && type === "keydown" && !e.repeat) { e.preventDefault(); setPaused(!paused); }
+    if (e.key.toLowerCase() === "f" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      if (type === "keydown" && !e.repeat) toggleFullscreen();
+      return;
+    }
+    if (e.key.toLowerCase() === "p" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      if (ready && type === "keydown" && !e.repeat) setPaused(!paused);
+      return;
+    }
+    // The browser exits real fullscreen on its own; the fallback is ours to close.
+    if (e.key === "Escape" && screenEl.classList.contains("is-fullscreen")) {
+      if (type === "keydown") { e.preventDefault(); toggleFullscreen(); }
       return;
     }
     const k = MANUAL[e.key.toLowerCase()];
@@ -322,16 +336,60 @@ function start() {
     if (e.repeat) return;
     type === "keydown" ? userDown.add(k) : userDown.delete(k);
     sync(k);
-  });
-  /* Esc pauses the game and the model together; Esc again or a click on the game resumes. */
+  }, { signal });
+  /* P pauses the game and the model together; P again or a click on the game resumes. */
   function setPaused(p) {
     paused = p;
     if (!p) screenEl.focus();
     syncRun();
   }
-  screenEl.addEventListener("pointerdown", () => { if (paused && ready) setPaused(false); else screenEl.focus(); });
-  screenEl.addEventListener("focus", () => { focused = true; syncRun(); });
-  screenEl.addEventListener("blur", () => { focused = false; userDown.clear(); syncAll(); syncRun(); });
+  screenEl.addEventListener("pointerdown", () => { if (paused && ready) setPaused(false); else screenEl.focus(); }, { signal });
+  screenEl.addEventListener("focus", () => { focused = true; syncRun(); }, { signal });
+  screenEl.addEventListener("blur", () => { focused = false; userDown.clear(); syncAll(); syncRun(); }, { signal });
+
+  /* Fullscreen, YouTube style: the button sits in the bottom-right corner, shows while the pointer moves over the
+     game or on a tap, and fades after a moment of stillness. It stays up while the game isn't running. Where the
+     Fullscreen API is missing (iPhone Safari allows it only on video), the screen is pinned over the page instead. */
+  const CONTROLS_MS = 2500;
+  let controlsTimer = null;
+  function showControls() {
+    screenEl.classList.add("controls-on");
+    clearTimeout(controlsTimer);
+    controlsTimer = setTimeout(() => { if (running) screenEl.classList.remove("controls-on"); }, CONTROLS_MS);
+  }
+  function hideControls() {
+    clearTimeout(controlsTimer);
+    if (running) screenEl.classList.remove("controls-on");
+  }
+  const isFullscreen = () => document.fullscreenElement === screenEl || screenEl.classList.contains("is-fullscreen");
+  function syncFullscreen() {
+    const on = isFullscreen();
+    screenEl.classList.toggle("fs", on);
+    const label = on ? "Exit full screen (f)" : "Full screen (f)";
+    fsBtn.setAttribute("aria-label", label);
+    fsBtn.title = label;
+    showControls();
+  }
+  function setFallback(on) {
+    screenEl.classList.toggle("is-fullscreen", on);
+    syncFullscreen();
+  }
+  function toggleFullscreen() {
+    if (document.fullscreenElement === screenEl) document.exitFullscreen();
+    else if (screenEl.classList.contains("is-fullscreen")) setFallback(false);
+    else if (screenEl.requestFullscreen && document.fullscreenEnabled) {
+      screenEl.requestFullscreen().catch(() => setFallback(true));
+    } else setFallback(true);
+    screenEl.focus();
+  }
+  // Pressing the button mustn't move focus off the game (that would pause it) or count as the click that resumes it.
+  fsBtn.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); }, { signal });
+  fsBtn.addEventListener("click", toggleFullscreen, { signal });
+  screenEl.addEventListener("pointermove", showControls, { signal });
+  screenEl.addEventListener("pointerdown", showControls, { signal });
+  screenEl.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") hideControls(); }, { signal });
+  document.addEventListener("fullscreenchange", syncFullscreen, { signal });
+  showControls();
 
   hud("Loading game…", 0);
   const idle = window.requestIdleCallback ? requestIdleCallback(boot, { timeout: 1500 }) : setTimeout(boot, 300);
@@ -339,7 +397,8 @@ function start() {
   return () => {
     disposed = true;
     if (window.cancelIdleCallback) cancelIdleCallback(idle); else clearTimeout(idle);
-    document.removeEventListener("visibilitychange", syncRun);
+    listening.abort();
+    clearTimeout(controlsTimer);
     observer.disconnect();
     clearInterval(decideTimer);
     for (const t of Object.values(tapTimers)) clearTimeout(t);

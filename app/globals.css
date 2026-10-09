@@ -300,6 +300,23 @@ kbd { font-family: var(--mono); font-size: 11.5px; min-width: 24px; text-align: 
 /* The game screen is always dark, so this uses the dark theme's soft text colour in both themes. */
 .play-cover { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 6px; background: rgba(0, 0, 0, .55); color: #C8D1CE; font-size: 15px; font-weight: 500; cursor: pointer; }
 
+/* The fullscreen button, YouTube style: bottom-right, shown while the pointer moves over the game, faded otherwise. */
+.fs-btn { position: absolute; right: 8px; bottom: 8px; z-index: 2; width: 38px; height: 38px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #fff; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .2s ease-out; }
+.fs-btn svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: square; filter: drop-shadow(0 0 2px rgba(0, 0, 0, .7)); transition: transform .15s ease-out; }
+.fs-btn:hover svg { transform: scale(1.12); }
+.doom-screen.controls-on .fs-btn, .fs-btn:focus-visible { opacity: 1; pointer-events: auto; }
+.fs-btn:focus-visible { outline: 2px solid #fff; outline-offset: -2px; }
+.fs-exit, .doom-screen.fs .fs-enter { display: none; }
+.doom-screen.fs .fs-exit { display: inline; }
+
+/* Fullscreen: the game alone on black, letterboxed at 16:10. The fallback pins it over the page where the API is missing. */
+.doom-screen:fullscreen, .doom-screen.is-fullscreen { display: grid; place-items: center; max-width: none; background: #000; border-radius: 0; }
+.doom-screen.is-fullscreen { position: fixed; inset: 0; z-index: 1000; }
+.doom-screen:fullscreen canvas, .doom-screen.is-fullscreen canvas { width: min(100vw, 160vh); max-height: 100vh; border-radius: 0; }
+.doom-screen:fullscreen .play-cover, .doom-screen.is-fullscreen .play-cover { border-radius: 0; }
+.doom-screen.fs .fs-btn { right: 16px; bottom: 16px; }
+.doom-screen.fs:not(.controls-on) { cursor: none; }
+
 /* height 0 + min-height 100%: the row takes its height from the game alone, so the HUD's top and bottom edges
    line up with the screen's, and the turn histogram absorbs whatever space is left. */
 .hud { height: 0; min-height: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
