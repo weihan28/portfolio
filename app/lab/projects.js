@@ -102,11 +102,13 @@ export function mountProjects() {
      (or the previous) slides in from the other side, wrapping around at either end. The timer moves on the same way.
      Vertical drags stay with the page (touch-action: pan-y in globals.css). */
   const phone = matchMedia("(max-width: 760px)");
-  const SLIDE_MS = 220, FLICK = 0.4, FLICK_MS = 100; // a flick: over FLICK px per ms across the last FLICK_MS
+  const SLIDE_MS = 480, FLICK = 0.4, FLICK_MS = 100; // a flick: over FLICK px per ms across the last FLICK_MS
+  // The card leaves picking up speed and arrives gliding to a stop, so the two halves read as one motion.
+  const LEAVE_MS = 260, LEAVE = "cubic-bezier(.4, 0, 1, 1)", ARRIVE = "cubic-bezier(.16, 1, .3, 1)";
   const listening = new AbortController(), { signal } = listening;
   let drag = null, dragged = false, sliding = false;
-  function setX(x, ms) {
-    cardEl.style.transition = ms ? `transform ${ms}ms ease-out, opacity ${ms}ms ease-out` : "none";
+  function setX(x, ms, ease = ARRIVE) {
+    cardEl.style.transition = ms ? `transform ${ms}ms ${ease}, opacity ${ms}ms ${ease}` : "none";
     cardEl.style.transform = x ? `translateX(${x}px)` : "";
     cardEl.style.opacity = x ? String(Math.max(.3, 1 - Math.abs(x) / cardEl.offsetWidth)) : "";
   }
@@ -115,8 +117,8 @@ export function mountProjects() {
     if (sliding) return;
     sliding = true;
     const w = cardEl.offsetWidth, ms = reducedMotion ? 0 : SLIDE_MS;
-    const out = reducedMotion ? 0 : Math.max(80, ms * (1 - Math.abs(fromX) / w));
-    setX(-dir * w, out);
+    const out = reducedMotion ? 0 : Math.max(140, LEAVE_MS * (1 - Math.abs(fromX) / w));
+    setX(-dir * w, out, LEAVE);
     setTimeout(() => {
       showProject((current + dir + projects.length) % projects.length);
       setX(dir * w, 0);
