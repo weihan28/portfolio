@@ -125,10 +125,12 @@ p { margin: 0; max-width: 65ch; }
 .flow-label sub, .flow-label sup { font-size: .72em; }
 @media (max-width: 860px) {
   .intro { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "mla" "about"; row-gap: 32px; }
-  /* A definite width, with the height from the diagram's proportions. Safari sizes an aspect-ratio box under size
-     containment as if it were empty, so here, where only the width is queried, the containment is inline-size. */
-  .mla { grid-area: mla; z-index: 0; width: 100%; align-self: start; aspect-ratio: 1080 / 954; container-type: inline-size; }
-  .flow-stage { left: 0; width: 100%; height: auto; opacity: 1; -webkit-mask-image: none; mask-image: none; }
+  /* Here the diagram sits in the flow at the column's full width and the section takes its height from it. Sized
+     from its own aspect ratio under size containment, as on wide screens, the section came out 0×0 in iPhone Safari.
+     The SVG's viewBox gives the height too, so it holds even where the stage's aspect ratio doesn't. */
+  .mla { grid-area: mla; z-index: 0; align-self: start; container-type: normal; }
+  .flow-stage { position: relative; inset: auto; width: 100%; height: auto; max-width: none; opacity: 1; -webkit-mask-image: none; mask-image: none; }
+  .flow-stage svg { height: auto; }
   .flow-hint { opacity: 1; }
 }
 .mla rect.cached { animation: flow-glow 1.8s ease-in-out infinite; }
