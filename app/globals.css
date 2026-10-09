@@ -334,9 +334,9 @@ kbd { font-family: var(--mono); font-size: 11.5px; min-width: 24px; text-align: 
   :is(.doom:fullscreen, .doom.is-fullscreen) { display: flex; flex-direction: column; background: var(--bg); }
   :is(.doom:fullscreen, .doom.is-fullscreen) .doom-screen { display: block; flex: none; height: auto; }
   :is(.doom:fullscreen, .doom.is-fullscreen) canvas { width: 100%; }
-  :is(.doom:fullscreen, .doom.is-fullscreen) .doom-pages { display: flex; flex: 1 1 0; min-height: 0; width: 100%; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; touch-action: pan-x; }
-  :is(.doom:fullscreen, .doom.is-fullscreen) .doom-pages::-webkit-scrollbar { display: none; }
-  :is(.doom:fullscreen, .doom.is-fullscreen) .doom-pages > * { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
+  /* The pages share one cell and are slid sideways by app/lab/doom-lab.js, which also wraps them around. */
+  :is(.doom:fullscreen, .doom.is-fullscreen) .doom-pages { display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); flex: 1 1 0; min-height: 0; width: 100%; overflow: hidden; touch-action: none; }
+  :is(.doom:fullscreen, .doom.is-fullscreen) .doom-pages > * { grid-area: 1 / 1; min-width: 0; min-height: 0; }
   :is(.doom:fullscreen, .doom.is-fullscreen) .hud { display: flex; height: auto; min-height: 0; border: 0; border-radius: 0; padding: 16px; }
   :is(.doom:fullscreen, .doom.is-fullscreen) .aim-col { grid-template-rows: auto minmax(20px, 1fr) auto auto; }
   :is(.doom:fullscreen, .doom.is-fullscreen) .feed { display: flex; flex-direction: column; gap: 12px; border: 0; border-radius: 0; padding: 16px; }
@@ -434,7 +434,9 @@ footer .tag-line { margin: 0 auto; max-width: none; font-family: var(--body); fo
   .lead { grid-template-rows: none; gap: 1px; }
   .lead-card { grid-row: auto; grid-template-rows: auto; }
   .mission, .skrow, .tl-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
-  .pside { position: static; order: -1; }
+  .pside { position: static; order: -1; overflow-x: clip; }
+  /* The card is a carousel here (app/lab/projects.js): sideways drags are its own, vertical ones scroll the page. */
+  .pcard { touch-action: pan-y; -webkit-user-select: none; user-select: none; }
   nav.top a { font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }

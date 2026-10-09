@@ -90,13 +90,74 @@ export function mountProjects() {
     lastTick = now;
     if (!reducedMotion && projInView && !onCard && !document.hidden) {
       elapsed += Math.min(dt, 100);
-      if (elapsed >= AUTO_MS) showProject((current + 1) % projects.length);
+      if (elapsed >= AUTO_MS) phone.matches ? slideTo(1) : showProject((current + 1) % projects.length);
     }
     progEl.style.width = reducedMotion ? "0%" : (Math.min(1, elapsed / AUTO_MS) * 100).toFixed(2) + "%";
     raf = requestAnimationFrame(tick);
   }
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* On phones (the 760px layout, where the card sits above the list) the card is also a carousel. Dragged sideways it
+     follows the finger; let go past a fifth of its width, or with a flick, and it slides off while the next project
+     (or the previous) slides in from the other side, wrapping around at either end. The timer moves on the same way.
+     Vertical drags stay with the page (touch-action: pan-y in globals.css). */
+  const phone = matchMedia("(max-width: 760px)");
+  const SLIDE_MS = 220, FLICK = 0.4, FLICK_MS = 100; // a flick: over FLICK px per ms across the last FLICK_MS
+  const listening = new AbortController(), { signal } = listening;
+  let drag = null, dragged = false, sliding = false;
+  function setX(x, ms) {
+    cardEl.style.transition = ms ? `transform ${ms}ms ease-out, opacity ${ms}ms ease-out` : "none";
+    cardEl.style.transform = x ? `translateX(${x}px)` : "";
+    cardEl.style.opacity = x ? String(Math.max(.3, 1 - Math.abs(x) / cardEl.offsetWidth)) : "";
+  }
+  // dir 1 is the next project: the card leaves to the left and the next one comes in from the right.
+  function slideTo(dir, fromX = 0) {
+    if (sliding) return;
+    sliding = true;
+    const w = cardEl.offsetWidth, ms = reducedMotion ? 0 : SLIDE_MS;
+    const out = reducedMotion ? 0 : Math.max(80, ms * (1 - Math.abs(fromX) / w));
+    setX(-dir * w, out);
+    setTimeout(() => {
+      showProject((current + dir + projects.length) % projects.length);
+      setX(dir * w, 0);
+      void cardEl.offsetWidth; // lay out the new card off to the side before it slides in
+      setX(0, ms);
+      setTimeout(() => { cardEl.style.transition = ""; sliding = false; }, ms);
+    }, out);
+  }
+  cardEl.addEventListener("pointerdown", e => {
+    dragged = false;
+    if (!phone.matches || sliding || !e.isPrimary || e.pointerType === "mouse") return;
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, on: false, trail: [[performance.now(), e.clientX]] };
+  }, { signal });
+  cardEl.addEventListener("pointermove", e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.on) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { drag = null; return; } // a scroll, not a swipe
+      if (Math.abs(dx) < 10) return;
+      drag.on = dragged = onCard = true;
+      cardEl.setPointerCapture(e.pointerId);
+    }
+    setX(dx, 0);
+    const now = performance.now();
+    drag.trail.push([now, e.clientX]);
+    while (drag.trail.length > 2 && now - drag.trail[0][0] > FLICK_MS) drag.trail.shift();
+  }, { signal });
+  for (const type of ["pointerup", "pointercancel"]) cardEl.addEventListener(type, e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const d = drag;
+    drag = null; onCard = false;
+    if (!d.on) return;
+    const dx = e.clientX - d.x, [t0, x0] = d.trail[0];
+    const speed = Math.abs(e.clientX - x0) / Math.max(1, performance.now() - t0);
+    if (type === "pointerup" && (Math.abs(dx) > cardEl.offsetWidth / 5 || speed > FLICK)) slideTo(dx < 0 ? 1 : -1, dx);
+    else setX(0, reducedMotion ? 0 : SLIDE_MS);
+  }, { signal });
+  // A swipe that ends on one of the card's links shouldn't also follow it.
+  cardEl.addEventListener("click", e => { if (dragged) { e.preventDefault(); e.stopPropagation(); dragged = false; } }, { capture: true, signal });
+
   let raf = requestAnimationFrame(tick);
 
-  return () => { cancelAnimationFrame(raf); observer.disconnect(); plist.replaceChildren(); };
+  return () => { cancelAnimationFrame(raf); observer.disconnect(); listening.abort(); plist.replaceChildren(); };
 }
