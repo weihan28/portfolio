@@ -373,17 +373,75 @@ function start() {
     const label = on ? "Exit full screen (f)" : "Full screen (f)";
     fsBtn.setAttribute("aria-label", label);
     fsBtn.title = label;
-    pagesEl.scrollLeft = 0; // each fullscreen opens on the model's output
+    page = 0; // each fullscreen opens on the model's output
+    placePages(0, 0, 0, 0, on);
     showDot(0);
     showControls();
   }
 
-  /* Upright in fullscreen, the model's output and its input are two pages under the game (globals.css). The dots
-     follow the swipe, and a tap on one turns to its page. Touching the pages mustn't take focus from the game,
-     since that would pause it. */
+  /* Upright in fullscreen, the model's output and its input are two pages under the game, stacked in one cell
+     (globals.css) and slid sideways here. A page follows the finger, and the one it swipes toward comes in beside it;
+     let go past a fifth of the width, or with a flick, and it turns. It wraps around, so either way from either page
+     turns to the other. The dots follow, and a tap on one turns to its page. Touching the pages mustn't take focus
+     from the game, since that would pause it. */
+  const pageEls = [...pagesEl.children], PAGE_MS = 220, PAGE_FLICK = 0.4, PAGE_FLICK_MS = 100;
+  let page = 0, pageDrag = null, turning = false;
   function showDot(i) { dots.forEach((d, j) => d.classList.toggle("on", j === i)); }
-  pagesEl.addEventListener("scroll", () => showDot(Math.round(pagesEl.scrollLeft / pagesEl.clientWidth)), { signal });
-  dots.forEach((d, i) => d.addEventListener("click", () => pagesEl.scrollTo({ left: i * pagesEl.clientWidth, behavior: "smooth" }), { signal }));
+  /* Lays the pages out with the current one moved by `shift` widths plus `dx` pixels. The page on the `side` it's
+     heading for (1: the next, on the right; -1: the previous, on the left) rides alongside; any other waits off to the
+     right. Out of fullscreen the pages are left where the page layout puts them. */
+  function placePages(shift, dx, side, ms = 0, on = true) {
+    const n = pageEls.length, beside = (page + side + n) % n;
+    pageEls.forEach((el, j) => {
+      const at = j === page ? 0 : side && j === beside ? side : 1;
+      el.style.transition = on && ms ? `transform ${ms}ms ease-out` : "";
+      el.style.transform = on ? `translateX(${(at + shift) * 100}%) translateX(${dx}px)` : "";
+    });
+  }
+  // Turns one page in direction dir, carrying on from a drag of dx pixels if there was one.
+  function turnPage(dir, dx = 0) {
+    if (turning) return;
+    turning = true;
+    const ms = Math.max(80, PAGE_MS * (1 - Math.abs(dx) / (pagesEl.clientWidth || 1)));
+    placePages(0, dx, dir);
+    void pagesEl.offsetWidth; // lay the incoming page out beside the current one before both move
+    placePages(-dir, 0, dir, ms);
+    setTimeout(() => {
+      page = (page + dir + pageEls.length) % pageEls.length;
+      placePages(0, 0, 0);
+      showDot(page);
+      turning = false;
+    }, ms);
+  }
+  dots.forEach((d, i) => d.addEventListener("click", () => { if (i !== page) turnPage(i > page ? 1 : -1); }, { signal }));
+  pagesEl.addEventListener("pointerdown", e => {
+    if (!isFullscreen() || turning || !e.isPrimary) return;
+    pageDrag = { id: e.pointerId, x: e.clientX, y: e.clientY, on: false, trail: [[performance.now(), e.clientX]] };
+  }, { signal });
+  pagesEl.addEventListener("pointermove", e => {
+    if (!pageDrag || e.pointerId !== pageDrag.id) return;
+    const dx = e.clientX - pageDrag.x, dy = e.clientY - pageDrag.y;
+    if (!pageDrag.on) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { pageDrag = null; return; }
+      if (Math.abs(dx) < 10) return;
+      pageDrag.on = true;
+      pagesEl.setPointerCapture(e.pointerId);
+    }
+    placePages(0, dx, dx < 0 ? 1 : -1);
+    const now = performance.now();
+    pageDrag.trail.push([now, e.clientX]);
+    while (pageDrag.trail.length > 2 && now - pageDrag.trail[0][0] > PAGE_FLICK_MS) pageDrag.trail.shift();
+  }, { signal });
+  for (const type of ["pointerup", "pointercancel"]) pagesEl.addEventListener(type, e => {
+    if (!pageDrag || e.pointerId !== pageDrag.id) return;
+    const d = pageDrag;
+    pageDrag = null;
+    if (!d.on) return;
+    const dx = e.clientX - d.x, [t0, x0] = d.trail[0];
+    const speed = Math.abs(e.clientX - x0) / Math.max(1, performance.now() - t0);
+    if (type === "pointerup" && (Math.abs(dx) > pagesEl.clientWidth / 5 || speed > PAGE_FLICK)) turnPage(dx < 0 ? 1 : -1, dx);
+    else placePages(0, 0, dx < 0 ? 1 : -1, PAGE_MS);
+  }, { signal });
   for (const type of ["pointerdown", "mousedown"]) wrapEl.addEventListener(type, e => {
     if (isFullscreen() && !screenEl.contains(e.target)) e.preventDefault();
   }, { signal });
