@@ -190,6 +190,18 @@ export function mountMla(host) {
   stage.appendChild(hint); // inside the stage, so it fades in and out with the diagram
   host.appendChild(stage);
 
+  /* Bringing the diagram up (the .active class in globals.css): a mouse does it by hovering, a finger by tapping.
+     Another tap, or a tap anywhere else, lets it settle back. A tap on the GitHub link just follows the link. */
+  const listening = new AbortController(), { signal } = listening;
+  stage.addEventListener("pointerenter", e => { if (e.pointerType === "mouse") stage.classList.add("active"); }, { signal });
+  stage.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") stage.classList.remove("active"); }, { signal });
+  stage.addEventListener("pointerup", e => {
+    if (e.pointerType !== "mouse" && !hint.contains(e.target)) stage.classList.toggle("active");
+  }, { signal });
+  document.addEventListener("pointerdown", e => {
+    if (e.pointerType !== "mouse" && !stage.contains(e.target)) stage.classList.remove("active");
+  }, { signal });
+
   const layout = (g, parts, cx, cy, width) => {
     const nominal = parts.reduce((a, p) => a + p.w, 0);
     const k = Math.max(0.02, (width - totalGaps(parts)) / nominal);
@@ -237,7 +249,7 @@ export function mountMla(host) {
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let elapsed = still ? FROZEN_AT : 0, last = performance.now(), visible = true;
   render(elapsed % CYCLE);
-  if (still) return () => host.replaceChildren();
+  if (still) return () => { listening.abort(); host.replaceChildren(); };
   const observer = new IntersectionObserver(es => { visible = es[0].isIntersecting; });
   observer.observe(host);
   let raf = 0;
@@ -250,5 +262,5 @@ export function mountMla(host) {
     render(elapsed % CYCLE);
   };
   raf = requestAnimationFrame(tick);
-  return () => { cancelAnimationFrame(raf); observer.disconnect(); host.replaceChildren(); };
+  return () => { cancelAnimationFrame(raf); observer.disconnect(); listening.abort(); host.replaceChildren(); };
 }
