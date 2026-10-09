@@ -317,6 +317,24 @@ kbd { font-family: var(--mono); font-size: 11.5px; min-width: 24px; text-align: 
 .doom-screen.fs .fs-btn { right: 16px; bottom: 16px; }
 .doom-screen.fs:not(.controls-on) { cursor: none; }
 
+/* Touch controls, Call of Duty Mobile style: a fixed translucent stick bottom-left, a round action button on the right.
+   They exist only on touchscreens, and only while the game runs, so "Tap to play" and the page scroll stay untouched. */
+.touch-ui { display: none; position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.controls .touch-only { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  .controls .desktop-only { display: none; }
+  .controls .touch-only { display: inline-flex; }
+  .doom-screen { container-type: inline-size; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  .doom-screen.live { touch-action: none; }
+  .doom-screen.live .touch-ui { display: block; }
+}
+.stick { position: absolute; left: 6cqw; bottom: 9%; width: clamp(64px, 22cqw, 150px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, .08) 0 44%, rgba(0, 0, 0, .28) 45%); border: 2px solid rgba(255, 255, 255, .45); box-shadow: 0 0 6px rgba(0, 0, 0, .35); pointer-events: auto; touch-action: none; transition: border-color .15s; }
+.stick-knob { position: absolute; left: 50%; top: 50%; width: 44%; height: 44%; margin: -22% 0 0 -22%; border-radius: 50%; background: rgba(255, 255, 255, .5); border: 2px solid rgba(255, 255, 255, .8); box-shadow: 0 0 8px rgba(0, 0, 0, .45); transition: transform .12s ease-out, background .15s; }
+.stick.active { border-color: rgba(255, 255, 255, .7); }
+.stick.active .stick-knob { transition: background .15s; background: rgba(255, 255, 255, .7); }
+.touch-use { position: absolute; right: 6cqw; bottom: 30%; width: clamp(44px, 12cqw, 84px); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; background: rgba(0, 0, 0, .3); border: 2px solid rgba(255, 255, 255, .5); box-shadow: 0 0 6px rgba(0, 0, 0, .35); color: rgba(255, 255, 255, .9); font: 600 clamp(10px, 2.6cqw, 15px)/1 var(--mono); letter-spacing: .08em; pointer-events: auto; touch-action: none; transition: transform .08s, background .08s; }
+.touch-use.active { background: rgba(255, 255, 255, .35); transform: scale(.94); }
+
 /* height 0 + min-height 100%: the row takes its height from the game alone, so the HUD's top and bottom edges
    line up with the screen's, and the turn histogram absorbs whatever space is left. */
 .hud { height: 0; min-height: 100%; overflow: hidden; display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; font-family: var(--mono); font-variant-numeric: tabular-nums; }

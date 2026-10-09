@@ -216,6 +216,8 @@ function start() {
     const want = ready && !paused && focused && inView && !document.hidden;
     if (want === running) return;
     running = want;
+    screenEl.classList.toggle("live", want);
+    if (!want) resetTouch();
     showControls();
     worker.postMessage({ type: "run", on: want });
     if (want) {
@@ -385,11 +387,110 @@ function start() {
   // Pressing the button mustn't move focus off the game (that would pause it) or count as the click that resumes it.
   fsBtn.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); }, { signal });
   fsBtn.addEventListener("click", toggleFullscreen, { signal });
-  screenEl.addEventListener("pointermove", showControls, { signal });
-  screenEl.addEventListener("pointerdown", showControls, { signal });
+  // On a touchscreen the pointer is a finger steering the game, so only a tap shows the button (see the look drag below).
+  const showForMouse = e => { if (e.pointerType !== "touch") showControls(); };
+  screenEl.addEventListener("pointermove", showForMouse, { signal });
+  screenEl.addEventListener("pointerdown", showForMouse, { signal });
   screenEl.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") hideControls(); }, { signal });
   document.addEventListener("fullscreenchange", syncFullscreen, { signal });
   showControls();
+
+  /* Touch controls, for touchscreens only: they're hidden elsewhere, and a mouse never drives them. The stick is
+     fixed in the bottom-left, like Call of Duty Mobile's; pushing it holds W, A, S and D, eight ways. A drag anywhere
+     else turns the crosshair: each PX_PER_TIC of sideways travel holds the turn key for one tic. USE is Space. All of
+     it goes through userDown like the keyboard, so the model still overrides turning while it aims. */
+  const touchUI = matchMedia("(hover: none) and (pointer: coarse)");
+  const stickEl = $("doom-stick"), knob = $("doom-knob"), useEl = $("doom-use");
+  const STICK_DEAD = .35, KNOB_REACH = .6, PX_PER_TIC = 8, SLOW_TICS = 6, TAP_MS = 250, TAP_PX = 10;
+  const STICK_KEYS = [K.up, K.down, K.strafeLeft, K.strafeRight];
+  let stickId = null, lookId = null, lookX = 0, lookStart = null, turnPx = 0, turnTics = 0, turnTimer = null;
+  if (touchUI.matches) cover.textContent = "Tap to play";
+
+  function press(k, down) {
+    if (down === userDown.has(k)) return;
+    down ? userDown.add(k) : userDown.delete(k);
+    sync(k);
+  }
+
+  function moveStick(e) {
+    const r = stickEl.getBoundingClientRect(), R = r.width / 2;
+    let x = (e.clientX - r.left - R) / R, y = (e.clientY - r.top - R) / R;
+    const len = Math.hypot(x, y);
+    if (len > 1) { x /= len; y /= len; }
+    knob.style.transform = `translate(${(x * R * KNOB_REACH).toFixed(1)}px, ${(y * R * KNOB_REACH).toFixed(1)}px)`;
+    press(K.up, y < -STICK_DEAD); press(K.down, y > STICK_DEAD);
+    press(K.strafeLeft, x < -STICK_DEAD); press(K.strafeRight, x > STICK_DEAD);
+  }
+  function releaseStick() {
+    stickId = null;
+    knob.style.transform = "";
+    stickEl.classList.remove("active");
+    for (const k of STICK_KEYS) press(k, false);
+  }
+
+  /* DOOM turns slowly for the first 6 tics a turn key is held, then twice as fast. Letting go for one tic every 6
+     keeps every tic at the slow rate, so a drag turns the same amount however fast it is. */
+  function turnTick() {
+    const dir = turnPx <= -PX_PER_TIC ? -1 : turnPx >= PX_PER_TIC ? 1 : 0;
+    const hold = dir !== 0 && turnTics < SLOW_TICS;
+    press(K.left, hold && dir < 0); press(K.right, hold && dir > 0);
+    if (hold) { turnPx -= dir * PX_PER_TIC; turnTics++; }
+    else turnTics = 0;
+    if (!dir && lookId === null) { clearInterval(turnTimer); turnTimer = null; turnPx = 0; }
+  }
+
+  function resetTouch() {
+    if (stickId !== null) releaseStick();
+    lookId = null; turnPx = 0; turnTics = 0;
+    clearInterval(turnTimer); turnTimer = null;
+    press(K.left, false); press(K.right, false); press(K.use, false);
+    useEl.classList.remove("active");
+  }
+
+  // The stick and USE stop their touches here, so the look drag on the screen below never sees them.
+  stickEl.addEventListener("pointerdown", e => {
+    if (e.pointerType !== "touch" || !running || stickId !== null) return;
+    e.preventDefault(); e.stopPropagation();
+    stickId = e.pointerId;
+    stickEl.setPointerCapture(e.pointerId);
+    stickEl.classList.add("active");
+    moveStick(e);
+  }, { signal });
+  stickEl.addEventListener("pointermove", e => { if (e.pointerId === stickId) moveStick(e); }, { signal });
+  for (const type of ["pointerup", "pointercancel"]) {
+    stickEl.addEventListener(type, e => { if (e.pointerId === stickId) releaseStick(); }, { signal });
+  }
+
+  useEl.addEventListener("pointerdown", e => {
+    if (e.pointerType !== "touch" || !running) return;
+    e.preventDefault(); e.stopPropagation();
+    useEl.setPointerCapture(e.pointerId);
+    useEl.classList.add("active");
+    press(K.use, true);
+  }, { signal });
+  for (const type of ["pointerup", "pointercancel"]) {
+    useEl.addEventListener(type, () => { useEl.classList.remove("active"); press(K.use, false); }, { signal });
+  }
+
+  screenEl.addEventListener("pointerdown", e => {
+    if (e.pointerType !== "touch" || !running || lookId !== null || fsBtn.contains(e.target)) return;
+    lookId = e.pointerId; lookX = e.clientX;
+    lookStart = { x: e.clientX, y: e.clientY, t: performance.now() };
+    screenEl.setPointerCapture(e.pointerId);
+    if (!turnTimer) turnTimer = setInterval(turnTick, TIC_MS);
+  }, { signal });
+  screenEl.addEventListener("pointermove", e => {
+    if (e.pointerId !== lookId) return;
+    turnPx += e.clientX - lookX;
+    lookX = e.clientX;
+  }, { signal });
+  for (const type of ["pointerup", "pointercancel"]) screenEl.addEventListener(type, e => {
+    if (e.pointerId !== lookId) return;
+    lookId = null;
+    // A quick tap that didn't drag shows the fullscreen button, as a tap on a YouTube video shows its controls.
+    const tap = performance.now() - lookStart.t < TAP_MS && Math.hypot(e.clientX - lookStart.x, e.clientY - lookStart.y) < TAP_PX;
+    if (tap) showControls();
+  }, { signal });
 
   hud("Loading game…", 0);
   const idle = window.requestIdleCallback ? requestIdleCallback(boot, { timeout: 1500 }) : setTimeout(boot, 300);
@@ -401,6 +502,7 @@ function start() {
     clearTimeout(controlsTimer);
     observer.disconnect();
     clearInterval(decideTimer);
+    clearInterval(turnTimer);
     for (const t of Object.values(tapTimers)) clearTimeout(t);
     if (worker) worker.terminate();
     if (model) model.terminate();

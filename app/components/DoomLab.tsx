@@ -10,15 +10,24 @@ export default function DoomLab() {
     <div className="lab-shell">
       <div className="panel" id="panel-doom">
         <div className="controls" aria-label="Controls">
-          <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</span>
-          <span><kbd>←</kbd><kbd>→</kbd> turn the crosshair</span>
-          <span><kbd>Space</kbd> open doors, respawn, next level</span>
-          <span><kbd>P</kbd> pause</span>
+          <span className="desktop-only"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</span>
+          <span className="desktop-only"><kbd>←</kbd><kbd>→</kbd> turn the crosshair</span>
+          <span className="desktop-only"><kbd>Space</kbd> open doors, respawn, next level</span>
+          <span className="desktop-only"><kbd>P</kbd> pause</span>
+          <span className="touch-only"><kbd>Stick</kbd> move</span>
+          <span className="touch-only"><kbd>Drag</kbd> turn the crosshair</span>
+          <span className="touch-only"><kbd>Use</kbd> open doors, respawn, next level</span>
         </div>
         <div className="doom">
           <div className="doom-screen" id="doom-screen" tabIndex={0} role="application"
             aria-label="DOOM. Move with W, A, S and D, and turn with the left and right arrow keys.">
             <canvas id="lab-canvas" width={640} height={400} />
+            {/* Touch controls, shown only on touchscreens while the game runs: a fixed stick to move, a drag anywhere
+                else to turn, and a button to use. */}
+            <div className="touch-ui" aria-hidden="true">
+              <div className="stick" id="doom-stick"><span className="stick-knob" id="doom-knob" /></div>
+              <div className="touch-use" id="doom-use">USE</div>
+            </div>
             <div className="play-cover" id="play-cover" hidden>Click to play</div>
             <button type="button" className="fs-btn" id="doom-fs" aria-label="Full screen (f)" title="Full screen (f)">
               <svg viewBox="0 0 24 24" aria-hidden="true">
