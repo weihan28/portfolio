@@ -37,6 +37,7 @@ function start() {
   const $ = id => document.getElementById(id);
   const canvas = $("lab-canvas"), ctx = canvas.getContext("2d");
   const screenEl = $("doom-screen"), cover = $("play-cover"), fsBtn = $("doom-fs"), wrapEl = $("doom-wrap");
+  const pagesEl = $("doom-pages"), dots = [...$("doom-dots").children];
   const stateEl = $("doom-state"), probsEl = $("doom-probs"), tapeEl = $("doom-tape");
 
   let priming = false;
@@ -372,8 +373,20 @@ function start() {
     const label = on ? "Exit full screen (f)" : "Full screen (f)";
     fsBtn.setAttribute("aria-label", label);
     fsBtn.title = label;
+    pagesEl.scrollLeft = 0; // each fullscreen opens on the model's output
+    showDot(0);
     showControls();
   }
+
+  /* Upright in fullscreen, the model's output and its input are two pages under the game (globals.css). The dots
+     follow the swipe, and a tap on one turns to its page. Touching the pages mustn't take focus from the game,
+     since that would pause it. */
+  function showDot(i) { dots.forEach((d, j) => d.classList.toggle("on", j === i)); }
+  pagesEl.addEventListener("scroll", () => showDot(Math.round(pagesEl.scrollLeft / pagesEl.clientWidth)), { signal });
+  dots.forEach((d, i) => d.addEventListener("click", () => pagesEl.scrollTo({ left: i * pagesEl.clientWidth, behavior: "smooth" }), { signal }));
+  for (const type of ["pointerdown", "mousedown"]) wrapEl.addEventListener(type, e => {
+    if (isFullscreen() && !screenEl.contains(e.target)) e.preventDefault();
+  }, { signal });
   function setFallback(on) {
     wrapEl.classList.toggle("is-fullscreen", on);
     document.documentElement.classList.toggle("doom-locked", on);

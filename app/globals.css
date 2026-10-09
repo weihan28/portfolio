@@ -320,14 +320,27 @@ kbd { font-family: var(--mono); font-size: 11.5px; min-width: 24px; text-align: 
 :is(.doom:fullscreen, .doom.is-fullscreen) .doom-screen { display: grid; place-items: center; width: 100%; height: 100%; max-width: none; border-radius: 0; outline: none; }
 :is(.doom:fullscreen, .doom.is-fullscreen) canvas { width: min(100%, 160vh); width: min(100%, 160dvh); border-radius: 0; }
 :is(.doom:fullscreen, .doom.is-fullscreen) .play-cover { border-radius: 0; }
-:is(.doom:fullscreen, .doom.is-fullscreen) .hud { display: none; }
+:is(.doom:fullscreen, .doom.is-fullscreen) :is(.hud, .feed) { display: none; }
+/* Upright, the space under the game holds two pages, the model's output and the state sent to it, swiped between
+   with the dots beneath showing which one is up. */
 @media (orientation: portrait) {
   :is(.doom:fullscreen, .doom.is-fullscreen) { display: flex; flex-direction: column; background: var(--bg); }
   :is(.doom:fullscreen, .doom.is-fullscreen) .doom-screen { display: block; flex: none; height: auto; }
   :is(.doom:fullscreen, .doom.is-fullscreen) canvas { width: 100%; }
-  :is(.doom:fullscreen, .doom.is-fullscreen) .hud { display: flex; flex: 1 1 0; width: 100%; height: auto; min-height: 0; border: 0; border-radius: 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
+  :is(.doom:fullscreen, .doom.is-fullscreen) .doom-pages { display: flex; flex: 1 1 0; min-height: 0; width: 100%; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; touch-action: pan-x; }
+  :is(.doom:fullscreen, .doom.is-fullscreen) .doom-pages::-webkit-scrollbar { display: none; }
+  :is(.doom:fullscreen, .doom.is-fullscreen) .doom-pages > * { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; }
+  :is(.doom:fullscreen, .doom.is-fullscreen) .hud { display: flex; height: auto; min-height: 0; border: 0; border-radius: 0; padding: 16px; }
   :is(.doom:fullscreen, .doom.is-fullscreen) .aim-col { grid-template-rows: auto minmax(20px, 1fr) auto auto; }
+  :is(.doom:fullscreen, .doom.is-fullscreen) .feed { display: flex; flex-direction: column; gap: 12px; border: 0; border-radius: 0; padding: 16px; }
+  :is(.doom:fullscreen, .doom.is-fullscreen) .feed p { height: auto; font-size: 15px; }
+  :is(.doom:fullscreen, .doom.is-fullscreen) .page-dots { display: flex; }
 }
+.doom-pages { display: contents; }
+.doom .feed { grid-column: 1 / -1; }
+.page-dots { display: none; flex: none; justify-content: center; gap: 2px; width: 100%; padding: 2px 0 calc(8px + env(safe-area-inset-bottom)); }
+.page-dots button { width: 22px; height: 22px; padding: 7px; border: 0; border-radius: 50%; background: var(--line); background-clip: content-box; cursor: pointer; transition: background-color .2s; }
+.page-dots button.on { background-color: var(--ink); }
 .doom-screen.fs .fs-btn { right: 16px; bottom: 16px; }
 .doom-screen.fs:not(.controls-on) { cursor: none; }
 

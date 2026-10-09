@@ -39,30 +39,38 @@ export default function DoomLab() {
               </svg>
             </button>
           </div>
-          <aside className="hud" aria-label="Model output">
-            <section className="hud-block">
-              <div className="hud-head"><span className="k">fire? · Noul</span><b className="hud-val" id="fire-p">—</b></div>
-              <div className="meter" aria-hidden="true"><i id="fire-fill" /><span className="mid" /></div>
-              <div className="meter-labels"><span id="fire-no" className="on">no</span><span className="k">0.5</span><span id="fire-yes">fire</span></div>
-            </section>
-            <section className="hud-block aim-block">
-              <div className="hud-head"><span className="k">turn? · Choice</span><b className="hud-val" id="turn-pick">—</b></div>
-              <div className="aim" id="doom-probs" />
-            </section>
-            <section className="hud-block">
-              <div className="hud-head"><span className="k">last 24 decisions</span><span className="k">newest →</span></div>
-              <div className="tape" id="doom-tape" aria-hidden="true" />
-            </section>
-            <div className="hud-stats">
-              <div><span className="k">decisions/s</span><b id="doom-rate">—</b></div>
-              <div><span className="k">latency p50</span><b id="doom-lat">—</b></div>
-              <div><span className="k">cost</span><b>$0</b></div>
+          {/* The model's output and its input. On the page they keep their places (the pages box is display: contents);
+              in upright fullscreen they become two pages under the game, swiped between. */}
+          <div className="doom-pages" id="doom-pages">
+            <aside className="hud" aria-label="Model output">
+              <section className="hud-block">
+                <div className="hud-head"><span className="k">fire? · Noul</span><b className="hud-val" id="fire-p">—</b></div>
+                <div className="meter" aria-hidden="true"><i id="fire-fill" /><span className="mid" /></div>
+                <div className="meter-labels"><span id="fire-no" className="on">no</span><span className="k">0.5</span><span id="fire-yes">fire</span></div>
+              </section>
+              <section className="hud-block aim-block">
+                <div className="hud-head"><span className="k">turn? · Choice</span><b className="hud-val" id="turn-pick">—</b></div>
+                <div className="aim" id="doom-probs" />
+              </section>
+              <section className="hud-block">
+                <div className="hud-head"><span className="k">last 24 decisions</span><span className="k">newest →</span></div>
+                <div className="tape" id="doom-tape" aria-hidden="true" />
+              </section>
+              <div className="hud-stats">
+                <div><span className="k">decisions/s</span><b id="doom-rate">—</b></div>
+                <div><span className="k">latency p50</span><b id="doom-lat">—</b></div>
+                <div><span className="k">cost</span><b>$0</b></div>
+              </div>
+            </aside>
+            <div className="feed">
+              <span className="k">state sent to the model</span>
+              <p id="doom-state">—</p>
             </div>
-          </aside>
-        </div>
-        <div className="feed">
-          <span className="k">state sent to the model</span>
-          <p id="doom-state">—</p>
+          </div>
+          <div className="page-dots" id="doom-dots">
+            <button type="button" className="on" aria-label="Model output" />
+            <button type="button" aria-label="State sent to the model" />
+          </div>
         </div>
         <p className="muted small" style={{ maxWidth: "none" }}>
           Inspired by TypeSafe&apos;s Jev, we make a model perform quick actions without reasoning. Every four game tics, it
